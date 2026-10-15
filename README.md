@@ -77,4 +77,4 @@ The Bicep templates preselect a resource by replacing `"id": "p-resource",` in t
 
 ## Validation
 
-Tested live in the Azure portal against a GlobalStandard test deployment: all charts load, deployment / status code (200, 429) / spillover splits populate, 1-minute peaks are preserved at 24h and 3d, and drag-to-zoom rescopes all charts. PTU-only charts could not be exercised with data because no PTU deployment was used.
+Tested live in the Azure portal against a GlobalStandard test deployment: all charts load, deployment / status code (200, 429) / spillover splits populate, 1-minute peaks are preserved at 24h and 3d, and drag-to-zoom rescopes all charts.

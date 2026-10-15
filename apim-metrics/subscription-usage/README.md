@@ -13,7 +13,7 @@ Requires Azure CLI (`az`) and PowerShell. Run `az login`, then run the commands 
 
 ## Part 1 - 429s, errors, latency per subscription
 
-**Tested on APIM Basic v2.** Standard v2 uses the same platform and is the supported tier. On the Consumption tier, gateway logs did not arrive in testing.
+**Tested on APIM Basic v2.** Standard v2 uses the same platform and is the supported tier.
 
 ### Setup (once)
 
