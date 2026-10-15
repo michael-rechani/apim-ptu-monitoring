@@ -1,4 +1,4 @@
-# ptu-apim-monitoring
+# apim-ptu-monitoring
 
 PTU validation tooling for Azure OpenAI / Foundry deployments, built only on Azure Monitor platform metrics (no diagnostic settings or Log Analytics required).
 
