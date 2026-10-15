@@ -1,0 +1,26 @@
+<!--
+    Paste this snippet inside the <inbound> section of a policy. In an API-level policy, put it
+    after <base />. The All APIs (global) policy has no <base /> - just add it inside <inbound>.
+
+    Where to put it - it must be at a scope where Application Insights logging is enabled:
+      - "All APIs" policy -> every LLM API gets tracked (simplest).
+      - A specific API's policy -> only that API (i.e. only that PTU) gets tracked.
+
+    Requirements (full checklist in README.md in this folder):
+      - The API must be an LLM API in OpenAI Chat Completions / Responses format (or Anthropic /
+        Vertex AI); the policy reads token counts from the response's "usage" section.
+      - Application Insights logging enabled on the API, custom metrics with dimensions enabled in
+        Application Insights, and "metrics": true set (Enable-ApimAppInsightsMetrics.ps1).
+
+    What it does:
+      Emits token-usage metrics (Total / Prompt / Completion Tokens) tagged with the APIM
+      subscription and API that made each call. Azure Monitor platform metrics can't split by
+      subscription, so this is the built-in way to see which subscription consumes which PTU.
+
+    "namespace" is just a label (it's how the metrics are grouped in Application Insights' Metrics
+    explorer); rename it if you like. Max 5 dimensions per policy; this uses 2.
+-->
+<llm-emit-token-metric namespace="PtuSubscriptionUsage">
+    <dimension name="Subscription ID" />
+    <dimension name="API ID" />
+</llm-emit-token-metric>

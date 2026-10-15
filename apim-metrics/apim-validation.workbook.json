@@ -1,0 +1,674 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "name": "header",
+      "content": {
+        "json": "# APIM Gateway Validation\nGateway-side health for the APIM instance fronting the PTU deployments, with an optional PTU usage section (Utilization V2, Active Tokens, 429s, Time to Response, Tokens Per Second) pulled in from the Foundry/Azure OpenAI resource. Every chart is a single metric at **1-minute grain**.\n\n**How to use:** pick the APIM instance (required) and, to correlate with PTU exhaustion, the Foundry/Azure OpenAI resource behind it (optional). Drag across any chart to zoom all charts to that window; re-select the time range to reset."
+      }
+    },
+    {
+      "type": 9,
+      "name": "parameters",
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "parameters": [
+          {
+            "id": "p-resource",
+            "version": "KqlParameterItem/1.0",
+            "name": "Resource",
+            "label": "APIM instance",
+            "type": 5,
+            "isRequired": true,
+            "query": "resources\n| where type =~ 'microsoft.apimanagement/service'\n| project id, name\n| order by name asc",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "showDefault": false
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources"
+          },
+          {
+            "id": "p-aoai-resource",
+            "version": "KqlParameterItem/1.0",
+            "name": "AoaiResource",
+            "label": "Foundry / Azure OpenAI resource (optional - for PTU correlation)",
+            "type": 5,
+            "isRequired": false,
+            "query": "resources\n| where type =~ 'microsoft.cognitiveservices/accounts'\n| where kind in~ ('OpenAI', 'AIServices')\n| project id, name\n| order by name asc",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "showDefault": false
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources"
+          },
+          {
+            "id": "p-time",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 259200000
+                }
+              ],
+              "allowCustom": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": 1,
+      "name": "ptu-usage-header",
+      "content": {
+        "json": "## PTU usage (Azure OpenAI / Foundry)\nAPIM's own metrics cannot show PTU utilization - that signal only exists on the Foundry/Azure OpenAI resource. Pick it in the **Foundry / Azure OpenAI resource** picker above to render the actual PTU exhaustion charts (Utilization V2, Active Tokens, 429s) and two performance charts (Time to Response, Tokens Per Second) on the same page as the gateway charts below. Leave that picker empty to hide this section."
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-utilization-max",
+      "content": {
+        "chartId": "ptu-utilization-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{AoaiResource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-AzureOpenAIProvisionedManagedUtilizationV2",
+            "aggregation": 3,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Provisioned-managed Utilization V2 (Max) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "conditionalVisibility": {
+        "parameterName": "AoaiResource",
+        "comparison": "isNotEqualTo",
+        "value": ""
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-active-tokens-sum",
+      "content": {
+        "chartId": "ptu-active-tokens-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{AoaiResource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-ActiveTokens",
+            "aggregation": 1,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Active Tokens (Sum per minute) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "conditionalVisibility": {
+        "parameterName": "AoaiResource",
+        "comparison": "isNotEqualTo",
+        "value": ""
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-requests-by-status-sum",
+      "content": {
+        "chartId": "ptu-requests-by-status-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{AoaiResource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  HTTP Requests-AzureOpenAIRequests",
+            "aggregation": 1,
+            "splitBy": [
+              "StatusCode"
+            ]
+          }
+        ],
+        "title": "Azure OpenAI Requests (Sum per minute) by status code",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "AoaiResource",
+        "comparison": "isNotEqualTo",
+        "value": ""
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-time-to-response-max",
+      "content": {
+        "chartId": "ptu-time-to-response-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{AoaiResource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Latency-AzureOpenAITimeToResponse",
+            "aggregation": 3,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Time to Response ms (Max) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "conditionalVisibility": {
+        "parameterName": "AoaiResource",
+        "comparison": "isNotEqualTo",
+        "value": ""
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-tokens-per-second-avg",
+      "content": {
+        "chartId": "ptu-tokens-per-second-avg",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{AoaiResource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Latency-AzureOpenAITokenPerSecond",
+            "aggregation": 4,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Tokens Per Second (Avg) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "AoaiResource",
+        "comparison": "isNotEqualTo",
+        "value": ""
+      }
+    },
+    {
+      "type": 1,
+      "name": "capacity-header",
+      "content": {
+        "json": "## Gateway capacity\nGateway CPU and memory, 0-100 (Standard v2). Sustained peaks near 100% mean the gateway itself (not the backend PTU pool) needs scaling."
+      }
+    },
+    {
+      "type": 10,
+      "name": "gateway-memory-max",
+      "content": {
+        "chartId": "gateway-memory-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Capacity-MemoryPercent_Gateway",
+            "aggregation": 3
+          }
+        ],
+        "title": "Gateway memory % (Max)",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "gateway-cpu-max",
+      "content": {
+        "chartId": "gateway-cpu-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Capacity-CpuPercent_Gateway",
+            "aggregation": 3
+          }
+        ],
+        "title": "Gateway CPU % (Max)",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 1,
+      "name": "traffic-header",
+      "content": {
+        "json": "## Traffic\nRequests per minute. Split by API to see which PTU-backed route is driving load - useful as a proxy for per-PTU demand when each PTU deployment is exposed through its own APIM API or backend."
+      }
+    },
+    {
+      "type": 10,
+      "name": "requests-by-api-sum",
+      "content": {
+        "chartId": "requests-by-api-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-Requests",
+            "aggregation": 1,
+            "splitBy": [
+              "ApiId"
+            ]
+          }
+        ],
+        "title": "Requests (Sum per minute) by API",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      }
+    },
+    {
+      "type": 1,
+      "name": "reliability-header",
+      "content": {
+        "json": "## Reliability\n**Gateway Response Code** is what the caller saw; **Backend Response Code** is what the PTU/OpenAI backend returned. Backend 429s with gateway 200s mean APIM retried/absorbed the throttle; backend 429s surfacing as gateway 429/5xx mean the caller felt it. Correlate with the PTU workbook's Utilization V2 and 429 charts."
+      }
+    },
+    {
+      "type": 10,
+      "name": "requests-by-gateway-code-sum",
+      "content": {
+        "chartId": "requests-by-gateway-code-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-Requests",
+            "aggregation": 1,
+            "splitBy": [
+              "GatewayResponseCodeCategory"
+            ]
+          }
+        ],
+        "title": "Requests (Sum per minute) by gateway response code category",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "requests-by-backend-code-sum",
+      "content": {
+        "chartId": "requests-by-backend-code-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-Requests",
+            "aggregation": 1,
+            "splitBy": [
+              "BackendResponseCodeCategory"
+            ]
+          }
+        ],
+        "title": "Requests (Sum per minute) by backend response code category",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "requests-by-error-reason-sum",
+      "content": {
+        "chartId": "requests-by-error-reason-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-Requests",
+            "aggregation": 1,
+            "splitBy": [
+              "LastErrorReason"
+            ]
+          }
+        ],
+        "title": "Requests (Sum per minute) by last error reason",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      }
+    },
+    {
+      "type": 1,
+      "name": "connectivity-header",
+      "content": {
+        "json": "## Connectivity\nDependency health between APIM and its backends (for example, a VNet-integrated or private-endpoint connection to the PTU resource). A drop here points at a network issue rather than PTU exhaustion, even if `Requests` also shows backend errors at the same time."
+      }
+    },
+    {
+      "type": 10,
+      "name": "network-connectivity-avg",
+      "content": {
+        "chartId": "network-connectivity-avg",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Network Status-NetworkConnectivity",
+            "aggregation": 1,
+            "splitBy": [
+              "ResourceType"
+            ]
+          }
+        ],
+        "title": "Network Connectivity (Sum per minute) by dependency type",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      }
+    },
+    {
+      "type": 1,
+      "name": "latency-header",
+      "content": {
+        "json": "## Latency\n**Duration** is the full round trip the caller experienced; **Backend Duration** is time spent waiting on the PTU/OpenAI backend. A growing gap between them is APIM policy overhead rather than backend slowness; both rising together points at the backend (often PTU queuing near exhaustion)."
+      }
+    },
+    {
+      "type": 10,
+      "name": "duration-max",
+      "content": {
+        "chartId": "duration-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-Duration",
+            "aggregation": 3,
+            "splitBy": [
+              "ApiId"
+            ]
+          }
+        ],
+        "title": "Overall gateway Duration ms (Max) by API",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "backend-duration-max",
+      "content": {
+        "chartId": "backend-duration-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.apimanagement/service",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.apimanagement/service",
+            "metric": "microsoft.apimanagement/service-Gateway Requests-BackendDuration",
+            "aggregation": 3,
+            "splitBy": [
+              "ApiId"
+            ]
+          }
+        ],
+        "title": "Backend Duration ms (Max) by API",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 1,
+      "name": "notes",
+      "content": {
+        "json": "---\n**Notes:**\n- This workbook targets **Standard v2** APIM. The classic `Capacity` metric is not used: `CpuPercent_Gateway` / `MemoryPercent_Gateway` are the v2 equivalents and have no dimensions.\n- Platform metrics for `Requests`/`Duration`/`BackendDuration` support `ApiId`, `Hostname`, `Location`, `LastErrorReason`, and response-code(-category) dimensions - **not** `SubscriptionId`. There is no platform metric to see traffic per APIM subscription (i.e., per customer/PTU route chosen by subscription key). To validate that traffic lands on the intended PTU, either give each PTU its own API/backend in APIM (so the `ApiId` split above is a direct proxy), or emit subscription ID via an APIM policy (`azure-openai-emit-token-metric` / custom dimension) into Application Insights and query it there.\n- APIM's own metrics are gateway-side only: they show *that* the backend is slow/erroring, not *why*. Set the optional **Foundry / Azure OpenAI resource** parameter above to pull in Utilization V2, Active Tokens, and 429s directly on this page; or use the PTU validation workbook in the repo root for the full per-deployment breakdown."
+      }
+    }
+  ],
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

@@ -1,0 +1,7 @@
+*.csv
+ptu-metrics/
+apim-metrics-output/
+subscription-health-output/
+subscription-usage-output/
+customer-data/
+testResults.xml

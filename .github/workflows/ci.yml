@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $issues = Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $issues | Format-Table RuleName, Severity, ScriptName, Line, Message -Wrap
+          if ($issues | Where-Object Severity -in 'Error', 'Warning') { exit 1 }
+
+      - name: Pester (unit tests, workbook JSON and Bicep anchors)
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck
+          Invoke-Pester -Path ./tests -CI -Output Detailed
+
+      - name: Bicep build
+        run: |
+          az bicep build --file ptu-workbook.bicep --stdout > /dev/null
+          az bicep build --file apim-metrics/apim-workbook.bicep --stdout > /dev/null

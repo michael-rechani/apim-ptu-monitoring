@@ -1,0 +1,362 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "name": "header",
+      "content": {
+        "json": "# PTU Validation\nUse this workbook to validate the initial PTU pool against current Azure OpenAI / Foundry usage. Every chart is a single metric at **1-minute grain**, so each point is a per-minute value (Sum = requests or tokens per minute).\n\n**How to use:** pick the resource and time range, then look for sustained peaks. Drag across any chart to zoom all charts to that window; re-select the time range to reset. Charts render up to **3 days** at 1-minute grain - for a longer period, step through it with a Custom range or use `Get-PtuMetrics.ps1`."
+      }
+    },
+    {
+      "type": 9,
+      "name": "parameters",
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "parameters": [
+          {
+            "id": "p-resource",
+            "version": "KqlParameterItem/1.0",
+            "name": "Resource",
+            "label": "Foundry / Azure OpenAI resource",
+            "type": 5,
+            "isRequired": true,
+            "query": "resources\n| where type =~ 'microsoft.cognitiveservices/accounts'\n| where kind in~ ('OpenAI', 'AIServices')\n| project id, name\n| order by name asc",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "showDefault": false
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources"
+          },
+          {
+            "id": "p-time",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 259200000
+                }
+              ],
+              "allowCustom": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": 1,
+      "name": "capacity-header",
+      "content": {
+        "json": "## Capacity\n**Utilization V2 (Max):** sustained peaks at or above 80-90% mean the pool is tight; 100% means requests are being throttled (429). **Active Tokens:** tokens minus cache hits - the load that actually consumes PTU capacity. Both only report provisioned (PTU) deployments."
+      }
+    },
+    {
+      "type": 10,
+      "name": "ptu-utilization-max",
+      "content": {
+        "chartId": "ptu-utilization-max",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-AzureOpenAIProvisionedManagedUtilizationV2",
+            "aggregation": 3,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Provisioned-managed Utilization V2 (Max) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "active-tokens-sum",
+      "content": {
+        "chartId": "active-tokens-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-ActiveTokens",
+            "aggregation": 1,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Active Tokens (Sum per minute) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 1,
+      "name": "demand-header",
+      "content": {
+        "json": "## Demand\nRequests and tokens per minute for every deployment (PTU and pay-as-you-go). Size from sustained peaks, not averages. Completion (output) tokens consume more PTU capacity than prompt (input) tokens, so compare both."
+      }
+    },
+    {
+      "type": 10,
+      "name": "requests-sum",
+      "content": {
+        "chartId": "requests-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  HTTP Requests-AzureOpenAIRequests",
+            "aggregation": 1,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Azure OpenAI Requests (Sum per minute) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      }
+    },
+    {
+      "type": 10,
+      "name": "prompt-tokens-sum",
+      "content": {
+        "chartId": "prompt-tokens-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-ProcessedPromptTokens",
+            "aggregation": 1,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Processed Prompt Tokens (Sum per minute) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "completion-tokens-sum",
+      "content": {
+        "chartId": "completion-tokens-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  Usage-GeneratedTokens",
+            "aggregation": 1,
+            "splitBy": [
+              "ModelDeploymentName"
+            ]
+          }
+        ],
+        "title": "Generated Completion Tokens (Sum per minute) by deployment",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 1,
+      "name": "throttling-header",
+      "content": {
+        "json": "## Throttling and spillover\n**429** responses are demand the deployment did not absorb. **IsSpillover = true** are requests that overflowed from PTU to a standard deployment. Both indicate unmet PTU demand and should be added on top of observed utilization when sizing."
+      }
+    },
+    {
+      "type": 10,
+      "name": "requests-by-status-sum",
+      "content": {
+        "chartId": "requests-by-status-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  HTTP Requests-AzureOpenAIRequests",
+            "aggregation": 1,
+            "splitBy": [
+              "StatusCode"
+            ]
+          }
+        ],
+        "title": "Azure OpenAI Requests (Sum per minute) by status code",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 10,
+      "name": "requests-by-spillover-sum",
+      "content": {
+        "chartId": "requests-by-spillover-sum",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.cognitiveservices/accounts",
+        "metricScope": 0,
+        "resourceIds": [
+          "{Resource}"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "timeGrain": "PT1M",
+        "metrics": [
+          {
+            "namespace": "microsoft.cognitiveservices/accounts",
+            "metric": "microsoft.cognitiveservices/accounts-Azure OpenAI  HTTP Requests-AzureOpenAIRequests",
+            "aggregation": 1,
+            "splitBy": [
+              "IsSpillover"
+            ]
+          }
+        ],
+        "title": "Azure OpenAI Requests (Sum per minute) by spillover",
+        "timeBrushParameterName": "TimeRange",
+        "showOpenInMe": true,
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50"
+    },
+    {
+      "type": 1,
+      "name": "notes",
+      "content": {
+        "json": "---\n**Notes:** The metrics API returns 1-minute data for 7 days, but the workbook charts render blank above roughly 3 days of 1-minute points (tested: 3 days renders, 7 days does not). Use `Get-PtuMetrics.ps1` for week-long P95/P99 figures. Utilization V2 cannot be exported through diagnostic settings - read it here or in Metrics Explorer. Customer/agent-level usage requires APIM token metrics in Application Insights."
+      }
+    }
+  ],
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
